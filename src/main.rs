@@ -40,8 +40,11 @@ fn main() {
         .build(&event_loop)
         .unwrap();
 
-    let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
-    let surface = unsafe { instance.create_surface(&window) };
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        backends: wgpu::Backends::PRIMARY,
+        ..Default::default()
+    });
+    let surface = unsafe { instance.create_surface(&window) }.unwrap();
 
     // WGPU 0.11+ support force fallback (if HW implementation not supported), set it to true or false (optional).
     let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
@@ -62,13 +65,14 @@ fn main() {
     .unwrap();
 
     let size = window.inner_size();
-    let surface_format = surface.get_supported_formats(&adapter)[0];
+    let surface_format = surface.get_capabilities(&adapter).formats[0];
     let mut surface_config = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: surface_format,
-        width: size.width as u32,
-        height: size.height as u32,
         present_mode: wgpu::PresentMode::Fifo,
+        ..surface
+            .get_default_config(&adapter, size.width, size.height)
+            .unwrap()
     };
     surface.configure(&device, &surface_config);
 
